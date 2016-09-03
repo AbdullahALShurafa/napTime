@@ -33,7 +33,7 @@ public class Boss : Character
     {
         m_player = GameObject.FindGameObjectWithTag("Player");
         rb = GetComponent<Rigidbody>();
-        m_agent = GetComponent<NavMeshAgent>();
+        m_agent = this.GetComponent<NavMeshAgent>();
         EnableNavMeshAgent(true);
         SetSpeed(3);
         m_agent.speed = GetSpeed();
@@ -135,6 +135,7 @@ public class Boss : Character
   
     void PerformJumpAttack()
     {
+        Debug.Log((Vector3.Distance(this.transform.position, g_landingPos.transform.position)));
         if (getPlayerPosOnce)
         {
             SetupAbilityAttack(false);
@@ -153,9 +154,11 @@ public class Boss : Character
                 playerLastPos = new Vector3(m_player.transform.position.x, 0, m_player.transform.position.z);
                 getPlayerPosOnce = false;
             }
-            EnableNavMeshAgent(true);
             PerformPositionLerp(transform.position, g_landingPos.transform.position, g_LandingSpeed);
-            
+            if (Vector3.Distance(this.transform.position, g_landingPos.transform.position) < 2f)
+            {
+                EnableNavMeshAgent(true);
+            }
         }
         if (GetComponent<NavMeshAgent>().isOnNavMesh == true)
         {
