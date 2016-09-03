@@ -153,9 +153,9 @@ public class Boss : Character
                 playerLastPos = new Vector3(m_player.transform.position.x, 0, m_player.transform.position.z);
                 getPlayerPosOnce = false;
             }
-
-            PerformPositionLerp(transform.position, g_landingPos.transform.position, g_LandingSpeed);
             EnableNavMeshAgent(true);
+            PerformPositionLerp(transform.position, g_landingPos.transform.position, g_LandingSpeed);
+            
         }
         if (GetComponent<NavMeshAgent>().isOnNavMesh == true)
         {
