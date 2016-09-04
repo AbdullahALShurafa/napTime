@@ -4,6 +4,7 @@ using System;
 
 public class Boss : Character
 {
+    // Testing...
     enum EnemyState
     {
         Walking,
@@ -21,14 +22,17 @@ public class Boss : Character
     public float g_landingTimer;
     GameObject m_player;
     Rigidbody rb;
-    bool getPlayerPosOnce;
+    private bool getPlayerPosOnce;
+    private bool didSetupAttack;
     public Transform[] g_patrolPoints;
     private int m_destinationPoint = 0;
     private NavMeshAgent m_agent;
     public Transform jumpHeightPosition;
     private bool m_didJump;
     Vector3 playerLastPos;
-    public GameObject g_landingPos;
+    public GameObject[] g_landingPos;
+    private int m_randomLandingPointIndex;
+    private bool m_didGetLandingPoint;
     void Start()
     {
         m_player = GameObject.FindGameObjectWithTag("Player");
@@ -37,19 +41,14 @@ public class Boss : Character
         EnableNavMeshAgent(true);
         SetSpeed(3);
         m_agent.speed = GetSpeed();
+        didSetupAttack = false;
+        m_didGetLandingPoint = false;
         
     }
 
     public void Update()
     {
-       
-
-        if (Input.GetKeyDown(KeyCode.I))
-        {
-            Debug.Log("ITS WORKING!!");
-            Debug.Log(m_player);
-
-        }
+        
         if (Input.GetKeyDown(KeyCode.C))
         {
             SetState(EnemyState.Charge);
@@ -79,7 +78,11 @@ public class Boss : Character
                 break;
             case EnemyState.Firepit:
                 {
-
+                    //if ((Vector3.Distance(transform.position, m_player.transform.position) < 15) && m_player.GetComponent<CharacterController>().isGrounded == true)
+                    //{
+                    //    Debug.Log("Player Is Grounded");
+                    //}
+                    //Debug.Log(((Vector3.Distance(transform.position, m_player.transform.position))));
                 }
                 break;
            case EnemyState.Dead:
@@ -94,6 +97,7 @@ public class Boss : Character
 
     void OnWalking()
     {
+        // Checks if the agent is close to the patrolPoints.
         if (m_agent.remainingDistance < 0.5f)
         {
             GoToNextPoint();
@@ -112,66 +116,74 @@ public class Boss : Character
     // MAKE SURE TO RESTRICT THE BOSS DASH DEPENDING ON MAP
     void PerformChargeAttack()
     {
-        if (getPlayerPosOnce)
+        if (!didSetupAttack)
         {
-            SetupAbilityAttack(false);
+            EnableNavMeshAgent(false);
+            SetupAbilityAttack();
         }
         if (m_timer >= g_chargeTimer)
         {
+            // Gets the player's last position before chargeAttack
             if (getPlayerPosOnce)
             {
                 playerLastPos  = new Vector3(m_player.transform.position.x,transform.position.y,m_player.transform.position.z);
                 getPlayerPosOnce = false;
+                didSetupAttack = true;
             }
+
             PerformPositionLerp(this.transform.position, playerLastPos, g_chargeSpeed);
+
+            // Checks if the this agent is close to the player's last position to end the charge attack.
             if (Vector3.Distance(this.transform.position, playerLastPos) < 1f)
             {
                 EnableNavMeshAgent(true);
                 SetState(EnemyState.Walking);
                 m_timer = 0;
+                didSetupAttack = false;
             }
         }
     }
   
     void PerformJumpAttack()
     {
-        Debug.Log((Vector3.Distance(this.transform.position, g_landingPos.transform.position)));
-        if (getPlayerPosOnce)
+        if (!didSetupAttack)
         {
-            SetupAbilityAttack(false);
+            EnableNavMeshAgent(false);
+            SetupAbilityAttack();
+            
         }
         
         if(m_timer >= g_delayJump && m_didJump == false)
         {
+            
             PerformPositionLerp(this.transform.position, jumpHeightPosition.position, 2);
+            g_landingPos[m_randomLandingPointIndex].GetComponent<SpriteRenderer>().enabled = true;
         }
 
         if (m_timer >= g_landingTimer)
         {
             m_didJump = true;
-            if (getPlayerPosOnce)
-            {
-                playerLastPos = new Vector3(m_player.transform.position.x, 0, m_player.transform.position.z);
-                getPlayerPosOnce = false;
-            }
-            PerformPositionLerp(transform.position, g_landingPos.transform.position, g_LandingSpeed);
-            if (Vector3.Distance(this.transform.position, g_landingPos.transform.position) < 2f)
+            didSetupAttack = true;
+            PerformPositionLerp(transform.position, g_landingPos[m_randomLandingPointIndex].transform.position, g_LandingSpeed);
+            if (Vector3.Distance(this.transform.position, g_landingPos[m_randomLandingPointIndex].transform.position) < 2f)
             {
                 EnableNavMeshAgent(true);
             }
         }
+        
         if (GetComponent<NavMeshAgent>().isOnNavMesh == true)
         {
-            //Debug.Log("Agent Is Grounded");
-            if (m_player.GetComponent<CharacterController>().isGrounded == true)
+            
+            // checks if the player is close to the agent once landed & if the player is grounded to deal damage
+            if ((Vector3.Distance(transform.position, m_player.transform.position) < 15) && m_player.GetComponent<CharacterController>().isGrounded == true)
             {
-                // Deal Damage if player is grounded once the boss lands on the ground
                 Debug.Log("Player Is Grounded");
             }
-
+            g_landingPos[m_randomLandingPointIndex].GetComponent<SpriteRenderer>().enabled = false;
             cameraShake.Shake(0.1f, 0.3f);
             m_didJump = false;
-
+            didSetupAttack = false;
+            m_didGetLandingPoint = false;
             m_timer = 0;
             SetState(EnemyState.Walking);
         }
@@ -192,9 +204,13 @@ public class Boss : Character
         //    SetState(EnemyState.Walking);
         //}
     }
-    void SetupAbilityAttack(bool a_enableNavMeshAgent)
+    void SetupAbilityAttack()
     {
-        EnableNavMeshAgent(a_enableNavMeshAgent);
+        if (!m_didGetLandingPoint)
+        {
+            m_randomLandingPointIndex = UnityEngine.Random.Range(0, g_landingPos.Length);
+            m_didGetLandingPoint = true;
+        }
         m_timer += Time.deltaTime;
         LookAtPlayer();
     }
